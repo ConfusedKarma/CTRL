@@ -1,0 +1,56 @@
+import telegram.ext as tg
+from telegram import Update
+import tg_bot.modules.sql.global_bans_sql as sql
+
+try:
+    from tg_bot import CUSTOM_CMD
+except:
+    CUSTOM_CMD = False
+
+CMD_STARTERS = CUSTOM_CMD or ('/', '!')
+
+
+class CustomCommandHandler(tg.CommandHandler):
+    def __init__(self, command, callback, **kwargs):
+        if "admin_ok" in kwargs:
+            del kwargs["admin_ok"]
+        super().__init__(command, callback, **kwargs)
+
+    def check_update(self, update):
+        if (
+            not isinstance(update, Update)
+            or not update.message
+            and (not update.edited_message or not self.allow_edited)
+        ):
+            return
+
+        message = update.message or update.edited_message
+        if sql.is_user_gbanned(update.effective_user.id):
+            return False
+
+        if message.text and len(message.text) > 1:
+            fst_word = message.text.split(None, 1)[0]
+            if len(fst_word) > 1 and any(fst_word.startswith(start) for start in CMD_STARTERS):
+                command = fst_word[1:].split('@')
+                command.append(message.bot.username)  # in case the command was sent without a username
+                if (
+                    command[0].lower() not in self.command
+                    or command[1].lower() != message.bot.username.lower()
+                ):
+                    return False
+                if self.filters is None:
+                    res = True
+                elif isinstance(self.filters, list):
+                    res = any(func(message) for func in self.filters)
+                else:
+                    res = self.filters(message)
+
+                return res and (command[0].lower() in self.command
+                                and command[1].lower() == message.bot.username.lower())
+
+        return False
+
+
+class CustomRegexHandler(tg.RegexHandler):
+    def __init__(self, pattern, callback, friendly="", **kwargs):
+        super().__init__(pattern, callback, **kwargs)
