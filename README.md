@@ -13,16 +13,16 @@ You can also tap the Deploy To Heroku button below to deploy straight to Heroku!
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.png?v=103)](https://github.com/ellerbrock/open-source-badges/)  
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/843cdeb7f4124dd39eb3930939478259)](https://app.codacy.com/manual/AVATARX0TIC/ctrl?utm_source=github.com&utm_medium=referral&utm_content=AVATARX0TIC/ctrl&utm_campaign=Badge_Grade_Dashboard)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/843cdeb7f4124dd39eb3930939478259)](https://app.codacy.com/manual/ConfusedKarma/ctrl?utm_source=github.com&utm_medium=referral&utm_content=ConfusedKarma/ctrl&utm_campaign=Badge_Grade_Dashboard)
 
-[![CODE SIZE](https://img.shields.io/github/languages/code-size/AVATARX0TIC/CTRL?style=for-the-badge)
+[![CODE SIZE](https://img.shields.io/github/languages/code-size/ConfusedKarma/CTRL?style=for-the-badge)
 
-[![GitHub forks](https://img.shields.io/github/forks/AVATARX0TIC/ctrl.svg?style=social&label=Fork&maxAge=2592000)](https://GitHub.com/AVATARX0TIC/ctrl/network/) [![GitHub stars](https://img.shields.io/github/stars/AVATARX0TIC/ctrl.svg?style=social&label=Star&maxAge=2592000)](https://GitHub.com/AVATARX0TIC/ctrl/stargazers/)
+[![GitHub forks](https://img.shields.io/github/forks/ConfusedKarma/ctrl.svg?style=social&label=Fork&maxAge=2592000)](https://GitHub.com/ConfusedKarma/ctrl/network/) [![GitHub stars](https://img.shields.io/github/stars/ConfusedKarma/ctrl.svg?style=social&label=Star&maxAge=2592000)](https://GitHub.com/ConfusedKarma/ctrl/stargazers/)
 
 
 ![CTRL_LOGO](https://i.ibb.co/HDtRGFq/1587897297749.jpg)
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/AVATARX0TIC/CTRL)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/ConfusedKarma/CTRL)
 
 
 Alternatively, [find me on telegram](https://t.me/refundisillegal.)
