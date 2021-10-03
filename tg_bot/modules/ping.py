@@ -1,23 +1,12 @@
-import html
-import json
-import random
 import time
-import pyowm
-from pyowm import timeutils, exceptions
-from datetime import datetime
-from typing import Optional, List
 
 import requests
-from telegram import Message, Chat, Update, Bot, MessageEntity
-from telegram import ParseMode
-from telegram.ext import CommandHandler, run_async, Filters
 from telegram import Update, Bot
-from telegram.ext import run_async
+from telegram import ParseMode
 
 from tg_bot.modules.disable import DisableAbleCommandHandler
 from tg_bot import dispatcher
-
-from requests import get
+from telegram.ext import run_async
 
 
 @run_async

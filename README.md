@@ -22,7 +22,7 @@ You can also tap the Deploy To Heroku button below to deploy straight to Heroku!
 
 ![CTRL_LOGO](https://i.ibb.co/HDtRGFq/1587897297749.jpg)
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/ConfusedKarma/CTRL)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
 
 Alternatively, [find me on telegram](https://t.me/refundisillegal.)
