@@ -1,5 +1,4 @@
 import pyowm
-from pyowm import timeutils, exceptions
 from telegram import Message, Chat, Update, Bot
 from telegram.ext import run_async
 
