@@ -1,4 +1,4 @@
-telethon >1.17.0, <1.18.3
+telethon
 future
 emoji
 requests
@@ -13,21 +13,17 @@ demjson
 PyLyrics
 wget
 geopy
-aiohttp>=2.2.5
+aiohttp
 gTTS
-Pillow>=4.2.0
+Pillow
 translations
 zalgo_text
 nltk
 pynewtonmath
-bs4
 telegraph
-psycopg2
 tldextract
 gsearch
 wikipedia
-pyowm
-PyLyrics
 spongemock
 psutil
 translator
@@ -36,4 +32,4 @@ httpx[http2]
 tswift
 speedtest-cli
 bleach
-git+https://github.com/starry69/python-markdown2.git
+markdown2

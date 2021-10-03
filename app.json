@@ -2,15 +2,15 @@
    "addons": [
       {
          "options": {
-            "version": "10"
+            "version": "13"
          },
-         "plan": "heroku-postgresql"
+         "plan": "heroku-postgresql:hobby-dev"
       }
    ],
    "description": "Modular Telegram bot for managing your groups with a few extras!",
    "env": {
-      "CUSTOM_CMD": {
-         "description": "# Set to ('/', '!') or whatever to enable it, like ALLOW_EXCL but with more custom handler!",
+      "ALLOW_EXCL": {
+         "description": "Set this to True if you want ! to be a command prefix along with /",
          "value": "True"
       },
       "BAN_STICKER": {
@@ -64,9 +64,14 @@
          "description": "Your bot token.",
          "value": ""
       },
-      "URL": {
-         "description": "The Heroku App URL :-  https://<appname>.herokuapp.com/",
-         "required": false,
+      "API_ID": {
+         "description": "Get Api id :-  https://my.telegram.org/auth",
+         "required": true,
+         "value": ""
+      },
+      "API_HASH": {
+         "description": "Get Api hash from :-  https://my.telegram.org/auth",
+         "required": true,
          "value": ""
       },
       "WHITELIST_USERS": {
@@ -82,5 +87,5 @@
       "ctrl"
    ],
    "name": "CTRL",
-   "repository": "https://github.com/AVATARX0TIC/CTRL"
+   "repository": "https://github.com/ConfusedKarma/CTRL"
 }
