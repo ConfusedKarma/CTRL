@@ -133,3 +133,12 @@ def build_keyboard_parser(bot, chat_id, buttons):
             keyb.append([InlineKeyboardButton(btn.name, url=btn.url)])
 
     return keyb
+
+
+
+def delete(delmsg, timer):
+    sleep(timer)
+    try:
+        delmsg.delete()
+    except:
+        return
