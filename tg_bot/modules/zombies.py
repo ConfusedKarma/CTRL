@@ -28,6 +28,7 @@ async def zombies(event):
 
         count = 0
 
+        arg = event.pattern_match.group(1).lower()
         if not arg:
                 msg = "**Searching for zombies...**\n"
                 msg = await event.reply(msg)
