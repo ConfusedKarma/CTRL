@@ -27,7 +27,6 @@ async def zombies(event):
     else:
 
         count = 0
-        arg = event.text.split()[-1]
 
         if not arg:
                 msg = "**Searching for zombies...**\n"
