@@ -56,8 +56,14 @@ def broadcast(bot: Bot, update: Update):
         failed = 0
         for chat in chats:
             try:
-                bot.sendMessage(int(chat.chat_id), to_send[1])
+                bot.sendMessage(
+                    int(chat.chat_id),
+                    to_send[1],
+                    parse_mode="MARKDOWN"
+                )
                 sleep(0.1)
+            except RetryAfter as e:
+                sleep(e.retry_after)
             except TelegramError:
                 failed += 1
                 LOGGER.warning("Couldn't send broadcast to %s, group name %s", str(chat.chat_id), str(chat.chat_name))
@@ -86,7 +92,6 @@ def log_user(bot: Bot, update: Update):
         sql.update_user(msg.forward_from.id,
                         msg.forward_from.username)
 
-
 @run_async
 def chats(bot: Bot, update: Update):
     all_chats = sql.get_all_chats() or []
@@ -100,7 +105,6 @@ def chats(bot: Bot, update: Update):
                                                 caption="Here is the list of chats in my database.")
 
   
-
 @run_async
 def rem_chat(bot: Bot, update: Update):
     msg = update.effective_message
