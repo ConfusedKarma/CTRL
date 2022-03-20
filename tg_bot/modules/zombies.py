@@ -7,7 +7,9 @@ from telethon.errors import ChatAdminRequiredError, UserAdminInvalidError
 from telethon.tl.functions.channels import EditBannedRequest
 from telethon.tl.types import ChannelParticipantsAdmins, ChatBannedRights
 
-from tg_bot import SUDO_USERS
+from tg_bot import SUDO_USERS, OWNER_ID
+
+OFFICERS = [OWNER_ID] + SUDO_USERS
 
 # =================== CONSTANT ===================
 
@@ -42,7 +44,7 @@ async def is_administrator(user_id: int, message):
     async for user in Tclient.iter_participants(
         message.chat_id, filter=ChannelParticipantsAdmins
     ):
-        if user_id == user.id or user_id in SUDO_USERS:
+        if user_id == user.id or user_id in OFFICERS:
             admin = True
             break
     return admin
