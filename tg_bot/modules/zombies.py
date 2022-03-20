@@ -1,54 +1,8 @@
 from tg_bot import Tclient
-
 from asyncio import sleep
+from tg_bot.modules.helper_funcs.Tclient.chatstatus import user_is_admin
 
 from telethon import events
-from telethon.errors import ChatAdminRequiredError, UserAdminInvalidError
-from telethon.tl.functions.channels import EditBannedRequest
-from telethon.tl.types import ChannelParticipantsAdmins, ChatBannedRights
-
-from tg_bot import SUDO_USERS, OWNER_ID
-
-OFFICERS = [OWNER_ID] + SUDO_USERS
-
-# =================== CONSTANT ===================
-
-BANNED_RIGHTS = ChatBannedRights(
-    until_date=None,
-    view_messages=True,
-    send_messages=True,
-    send_media=True,
-    send_stickers=True,
-    send_gifs=True,
-    send_games=True,
-    send_inline=True,
-    embed_links=True,
-)
-
-
-UNBAN_RIGHTS = ChatBannedRights(
-    until_date=None,
-    send_messages=None,
-    send_media=None,
-    send_stickers=None,
-    send_gifs=None,
-    send_games=None,
-    send_inline=None,
-    embed_links=None,
-)
-
-
-# Check if user has admin rights
-async def is_administrator(user_id: int, message):
-    admin = False
-    async for user in Tclient.iter_participants(
-        message.chat_id, filter=ChannelParticipantsAdmins
-    ):
-        if user_id == user.id or user_id in OFFICERS:
-            admin = True
-            break
-    return admin
-
 
 @Tclient.on(events.NewMessage(pattern=f"^[!/]zombies ?(.*)"))
 async def zombies(event):
@@ -81,8 +35,8 @@ async def zombies(event):
     creator = chat.creator
 
     # Well
-    if not await is_administrator(user_id=event.from_id, message=event):
-        await event.respond("You're Not An Admin!")
+    if not await user_is_admin(user_id=event.sender_id, message=event):
+        await event.reply("Only Admins are allowed to use this command")
         return
 
     if not admin and not creator:
@@ -92,21 +46,6 @@ async def zombies(event):
     cleaning_zombies = await event.respond("Cleaning Zombies...")
     del_u = 0
     del_a = 0
-
-    async for user in event.client.iter_participants(event.chat_id):
-        if user.deleted:
-            try:
-                await event.client(
-                    EditBannedRequest(event.chat_id, user.id, BANNED_RIGHTS)
-                )
-            except ChatAdminRequiredError:
-                await cleaning_zombies.edit("I Don't Have Ban Rights In This Group.")
-                return
-            except UserAdminInvalidError:
-                del_u -= 1
-                del_a += 1
-            await event.client(EditBannedRequest(event.chat_id, user.id, UNBAN_RIGHTS))
-            del_u += 1
 
     if del_u > 0:
         del_status = f"Cleaned `{del_u}` Zombies"
