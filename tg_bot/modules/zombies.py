@@ -45,7 +45,6 @@ async def zombies(event):
 
     cleaning_zombies = await event.respond("Cleaning Zombies...")
     del_u = 0
-    del_a = 0
 
     if del_u > 0:
         del_status = f"Cleaned `{del_u}` Zombies"
