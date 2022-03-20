@@ -39,7 +39,10 @@ UNBAN_RIGHTS = ChatBannedRights(
 
 @Tclient.on(events.NewMessage(pattern=f"^[!/]zombies ?(.*)"))
 async def zombies(event):
-    """ For .zombies command, list all the zombies in a chat. """
+
+    if not event.is_group:
+        await event.reply("I don't think this is a group.")
+        return
 
     con = event.pattern_match.group(1).lower()
     del_u = 0
