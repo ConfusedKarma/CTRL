@@ -37,7 +37,7 @@ UNBAN_RIGHTS = ChatBannedRights(
 
 
 
-@Tcliet.on(events.NewMessage(pattern=f"^[!/]zombies ?(.*)"))
+@Tclient.on(events.NewMessage(pattern=f"^[!/]zombies ?(.*)"))
 async def zombies(event):
     """ For .zombies command, list all the zombies in a chat. """
 
