@@ -39,7 +39,7 @@ UNBAN_RIGHTS = ChatBannedRights(
 # Check if user has admin rights
 async def is_administrator(user_id: int, message):
     admin = False
-    async for user in telethn.iter_participants(
+    async for user in Tclient.iter_participants(
         message.chat_id, filter=ChannelParticipantsAdmins
     ):
         if user_id == user.id or user_id in SUDO_USERS:
@@ -51,6 +51,10 @@ async def is_administrator(user_id: int, message):
 @Tclient.on(events.NewMessage(pattern=f"^[!/]zombies ?(.*)"))
 async def zombies(event):
     """ For .zombies command, list all the zombies in a chat. """
+
+    if not event.is_group:
+        await event.reply("I don't think this is a group.")
+        return
 
     con = event.pattern_match.group(1).lower()
     del_u = 0
