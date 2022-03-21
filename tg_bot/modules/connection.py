@@ -72,7 +72,7 @@ def connect_chat(bot, update, args):
         if len(args) >= 1:
             try:
                 connect_chat = int(args[0])
-                getstatusadmin = context.bot.get_chat_member(
+                getstatusadmin = bot.get_chat_member(
                     connect_chat, update.effective_message.from_user.id
                 )
             except ValueError:
