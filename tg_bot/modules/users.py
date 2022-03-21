@@ -4,18 +4,16 @@ from typing import Optional
 
 from telegram import TelegramError, Chat, Message
 from telegram import Update, Bot
-from telegram.error import BadRequest, Unauthorized, RetryAfter
+from telegram.error import BadRequest
 from telegram.ext import MessageHandler, Filters, CommandHandler
 from telegram.ext.dispatcher import run_async
 
-
 import tg_bot.modules.sql.users_sql as sql
-from tg_bot import SUDO_USERS
-from tg_bot import escape_markdown
 from tg_bot import dispatcher, OWNER_ID, LOGGER
 from tg_bot.modules.helper_funcs.filters import CustomFilters
 
 USERS_GROUP = 4
+CHAT_GROUP = 10
 
 
 def get_user_id(username):
@@ -42,7 +40,9 @@ def get_user_id(username):
                     return userdat.id
 
             except BadRequest as excp:
-                if excp.message != 'Chat not found':
+                if excp.message == 'Chat not found':
+                    pass
+                else:
                     LOGGER.exception("Error extracting user ID")
 
     return None
@@ -56,20 +56,33 @@ def broadcast(bot: Bot, update: Update):
         failed = 0
         for chat in chats:
             try:
-                bot.sendMessage(
-                    int(chat.chat_id),
-                    to_send[1],
-                    parse_mode="MARKDOWN"
-                )
+                bot.sendMessage(int(chat.chat_id), to_send[1])
                 sleep(0.1)
-            except RetryAfter as e:
-                sleep(e.retry_after)
             except TelegramError:
                 failed += 1
-                LOGGER.warning("Couldn't send broadcast to %s, group name %s", str(chat.chat_id), str(chat.chat_name))
-
+                LOGGER.warning("Couldn't send broadcast to %s, group name %s", str(chat.chat_id), str(chat.chat_name))                
         update.effective_message.reply_text("Broadcast complete. {} groups failed to receive the message, probably "
                                             "due to being kicked.".format(failed))
+
+
+@run_async
+def userbroadcast(bot: Bot, update: Update):
+    to_send = update.effective_message.text.split(None, 1)
+    if len(to_send) >= 2:
+        users = sql.get_all_users() or []
+        failed = 0
+        success = 0
+        for user in users:
+            try:
+                bot.sendMessage(int(user.user_id), to_send[1])
+                success += 1
+                LOGGER.warning("Sent broadcast to %s, username %s, Count: %s", str(user.user_id), str(user.username), str(success))
+                sleep(0.5)
+            except TelegramError:
+                failed += 1
+                # LOGGER.warning("Couldn't send broadcast to %s, username %s", str(user.user_id), str(user.username))
+        update.effective_message.reply_text("Broadcast complete.\n{} users failed\n{} users received".format(failed, success))
+
 
 
 @run_async
@@ -92,6 +105,7 @@ def log_user(bot: Bot, update: Update):
         sql.update_user(msg.forward_from.id,
                         msg.forward_from.username)
 
+
 @run_async
 def chats(bot: Bot, update: Update):
     all_chats = sql.get_all_chats() or []
@@ -104,26 +118,11 @@ def chats(bot: Bot, update: Update):
         update.effective_message.reply_document(document=output, filename="chatlist.txt",
                                                 caption="Here is the list of chats in my database.")
 
-  
 @run_async
-def rem_chat(bot: Bot, update: Update):
-    msg = update.effective_message
-    chats = sql.get_all_chats()
-    kicked_chats = 0
-    for chat in chats:
-        id = chat.chat_id
-        sleep(0.1) # Reduce floodwait
-        try:
-            bot.get_chat(id, timeout=60)
-        except (BadRequest, Unauthorized):
-            kicked_chats += 1
-            sql.rem_chat(id)
-    if kicked_chats >= 1:
-        msg.reply_text("Done! {} chats were removed from the database!".format(kicked_chats))
-    else:
-        msg.reply_text("No chats had to be removed from the database!")
+def chat_checker(bot: Bot, update: Update):
+  if update.effective_message.chat.get_member(bot.id).can_send_messages == False:
+    bot.leaveChat(update.effective_message.chat.id)
 
-        
 
 def __user_info__(user_id):
     if user_id in [777000, 1087968824]:
@@ -133,9 +132,12 @@ def __user_info__(user_id):
     num_chats = sql.get_user_num_chats(user_id)
     return """I've seen them in <code>{}</code> chats in total.""".format(num_chats)
 
-
 def __stats__():
     return "{} users, across {} chats".format(sql.num_users(), sql.num_chats())
+
+
+def __gdpr__(user_id):
+    sql.del_user(user_id)
 
 
 def __migrate__(old_chat_id, new_chat_id):
@@ -148,12 +150,12 @@ __mod_name__ = "Users"
 
 BROADCAST_HANDLER = CommandHandler("broadcast", broadcast, filters=Filters.user(OWNER_ID))
 USER_HANDLER = MessageHandler(Filters.all & Filters.group, log_user)
+USER_BROADCAST_HANDLER = CommandHandler("userbroadcast", userbroadcast, filters=Filters.user(OWNER_ID))
 CHATLIST_HANDLER = CommandHandler("chatlist", chats, filters=CustomFilters.sudo_filter)
-DELETE_CHATS_HANDLER = CommandHandler("cleanchats", rem_chat, filters=Filters.user(OWNER_ID))
-
-
+CHAT_CHECKER_HANDLER = MessageHandler(Filters.all & Filters.group, chat_checker)
 
 dispatcher.add_handler(USER_HANDLER, USERS_GROUP)
 dispatcher.add_handler(BROADCAST_HANDLER)
+dispatcher.add_handler(USER_BROADCAST_HANDLER)
 dispatcher.add_handler(CHATLIST_HANDLER)
-dispatcher.add_handler(DELETE_CHATS_HANDLER)
+dispatcher.add_handler(CHAT_CHECKER_HANDLER, CHAT_GROUP)
