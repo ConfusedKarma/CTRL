@@ -86,11 +86,28 @@ class GoodbyeButtons(BASE):
         self.same_line = same_line
 
 
+class WelcomeTimeout(BASE):
+	__tablename__ = "welcome_timeout"
+	chat_id = Column(String(14), primary_key=True)
+	user_id = Column(BigInteger, primary_key=True, nullable=False)
+	timeout_int = Column(Integer, default=600)
+
+	def __init__(self, chat_id, user_id, timeout_int=600):
+		self.chat_id = str(chat_id)  # ensure string
+		self.user_id = user_id
+		self.timeout_int = timeout_int
+
+	def __repr__(self):
+		return "<User timeout '%s' in %s>" % (self.user_id, self.chat_id)
+
+
 Welcome.__table__.create(checkfirst=True)
 WelcomeButtons.__table__.create(checkfirst=True)
 GoodbyeButtons.__table__.create(checkfirst=True)
 CleanServiceSetting.__table__.create(checkfirst=True)
 WelcomeSecurity.__table__.create(checkfirst=True)
+WelcomeTimeout.__table__.create(checkfirst=True)
+
 
 
 INSERTION_LOCK = threading.RLock()
