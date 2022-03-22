@@ -1,6 +1,6 @@
 import threading
 
-from sqlalchemy import String, Column, BigInteger, UnicodeText
+from sqlalchemy import String, Column, Integer, UnicodeText, BigInteger
 
 from tg_bot.modules.sql import SESSION, BASE
 
