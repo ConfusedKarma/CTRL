@@ -89,8 +89,9 @@ async def ban(event):
     await event.reply(f"Banned -> [{sender.first_name}](tg://user?id={sender.id})")
     sleep(1)
     await Tclient.send_file(event.chat_chat_id, BAN_STICKER)
-    except Exception as a:
+  except Exception as a:
     await Tclient.send_message(event.chat_id, f"{a}")
+
 
 
 __help__ = """
