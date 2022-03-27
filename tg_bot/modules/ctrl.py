@@ -66,7 +66,13 @@ async def bin(event):
 
 @Tclient.on(events.NewMessage(pattern="[.?]ban"))
 async def ban(event):
-    if event.from_id is None:
+    chat = await Tclient.get_chat()
+    admin = chat.admin_rights
+    creator = chat.creator
+
+    # Well
+    if not admin and not creator:
+        await event.reply(You aren't Admin!)
         return
     
     if not event.is_group:
@@ -78,15 +84,16 @@ async def ban(event):
         return
 
     if not await can_ban_users(message=event):
-        await event.reply("You don't have enough permission :(")
+        await event.reply("Don't have enough permission :(")
         return
 
-    message = await event.get_reply_message()
-    if not message:
-        await event.reply("Reply to user message or Mention else specify a valid ID!.")
-        return
-    await Tclient.edit_permissions(event.chat_id, sender.id, view_messages=False)
-    await event.reply(f"Banned -> [{sender.first_name}](tg://user?id={sender.id})")
+    user = await Tclient.get_user_from_event()
+    if not user:
+        await event.reply(
+            "Reply to user message or Mention else specify a valid ID!."
+        )
+    await Tclient.edit_permissions(event.chat_id, user.id, view_messages=False)
+    await event.reply("`{}` was banned!".format(str(user.id)))
 
 
 __help__ = """
