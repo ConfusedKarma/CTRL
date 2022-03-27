@@ -87,7 +87,7 @@ async def ban(event):
         await event.reply("Don't have enough permission :(")
         return
 
-    user = await get_user_from_event()
+    user = await event.user()
     if not user:
         await event.reply(
             "Reply to user message or Mention else specify a valid ID!"
