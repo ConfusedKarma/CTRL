@@ -66,7 +66,7 @@ async def bin(event):
 
 @Tclient.on(events.NewMessage(pattern="[.?]ban"))
 async def ban(event):
-    chat = await Tclient.get_chat()
+    chat = await event.get_chat()
     admin = chat.admin_rights
     creator = chat.creator
 
