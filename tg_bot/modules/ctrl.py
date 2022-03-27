@@ -87,9 +87,6 @@ async def ban(event):
         return
     await Tclient.edit_permissions(event.chat_id, sender.id, view_messages=False)
     await event.reply(f"Banned -> [{sender.first_name}](tg://user?id={sender.id})")
-  except Exception as a:
-    await Tclient.send_message(event.chat_id, f"{a}")
-
 
 
 __help__ = """
