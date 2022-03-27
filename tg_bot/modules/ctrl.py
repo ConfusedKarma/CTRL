@@ -1,8 +1,11 @@
 import requests, os
+from time import sleep
 
-from tg_bot import Tclient
+from tg_bot import Tclient, BAN_STICKER
 from bs4 import BeautifulSoup
 from telethon import events
+
+from tg_bot.modules.helper_funcs.Tclient.chatstatus import user_is_admin, can_ban_users
 
 @Tclient.on(events.NewMessage(pattern="[/!]paste"))
 async def paste_bin(event):
@@ -59,6 +62,36 @@ async def bin(event):
     k = soup.find("div", {"class": "page"})
     await event.reply(f"**{k.get_text()[62:]}**", parse_mode="markdown")
     
+
+
+@Tclient.on(events.NewMessage(pattern="[.?]ban"))
+async def ban(event):
+    if event.from_id is None:
+        return
+    
+    if not event.is_group:
+        await event.reply("I don't think this is a group.")
+        return
+
+    if not await user_is_admin(user_id=event.sender_id, message=event):
+        await event.reply("Only Admins are allowed to use this command")
+        return
+
+    if not await can_ban_users(message=event):
+        await event.reply("You don't have enough permission :(")
+        return
+
+    message = await event.get_reply_message()
+    if not message:
+        await event.reply("Reply to user message or Mention else specify a valid ID!.")
+        return
+    await Tclient.edit_permissions(event.chat_id, sender.id, view_messages=False)
+    await event.reply(f"Banned -> [{sender.first_name}](tg://user?id={sender.id})")
+    sleep(1)
+    await Tclient.send_file(event.chat_chat_id, BAN_STICKER)
+  except Exception as a:
+    await Tclient.send_message(event.chat_id, f"{a}")
+
 
 __help__ = """
  - /paste: Paste on pastefy.
