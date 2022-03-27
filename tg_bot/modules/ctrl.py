@@ -1,7 +1,7 @@
 import requests, os
 from time import sleep
 
-from tg_bot import Tclient, BAN_STICKER
+from tg_bot import Tclient
 from bs4 import BeautifulSoup
 from telethon import events
 
@@ -87,8 +87,6 @@ async def ban(event):
         return
     await Tclient.edit_permissions(event.chat_id, sender.id, view_messages=False)
     await event.reply(f"Banned -> [{sender.first_name}](tg://user?id={sender.id})")
-    sleep(1)
-    await Tclient.send_file(event.chat_chat_id, BAN_STICKER)
   except Exception as a:
     await Tclient.send_message(event.chat_id, f"{a}")
 
