@@ -87,10 +87,10 @@ async def ban(event):
         await event.reply("Don't have enough permission :(")
         return
 
-    user = await Tclient.get_user_from_event()
+    user = await event.get_user_from_event()
     if not user:
         await event.reply(
-            "Reply to user message or Mention else specify a valid ID!."
+            "Reply to user message or Mention else specify a valid ID!"
         )
     await Tclient.edit_permissions(event.chat_id, user.id, view_messages=False)
     await event.reply("`{}` was banned!".format(str(user.id)))
