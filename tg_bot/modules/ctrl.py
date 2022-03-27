@@ -12,13 +12,13 @@ async def paste_bin(event):
     if not event.reply_to:
         return await event.reply("Reply /paste Message|File")
     r = await event.get_reply_message()
-    
+
     if not r.media and not r.message:
         return await event.reply("Is replied msg is text or file?")
 
     if r.message:
         content = str(r.message)
-    elif r.media:
+    else:
         doc = await Tclient.download_media(r)
         with open(doc, mode="r") as f:
             content = f.read()
@@ -50,7 +50,7 @@ Translated from **{lang}** to **{co}**
 """
         await event.reply(msg, parse_mode="markdown")
     except KeyError: # TODO: ARABIC AND HINDI
-        msg = f"Failed to translate"
+        msg = "Failed to translate"
         await event.reply(msg, parse_mode="markdown")
 
 
@@ -74,7 +74,7 @@ async def ban(event):
     if not admin and not creator:
         await event.reply("You aren't Admin!")
         return
-    
+
     if not event.is_group:
         await event.reply("I don't think this is a group.")
         return
@@ -93,7 +93,7 @@ async def ban(event):
             "Reply to user message or Mention else specify a valid ID!"
         )
     await Tclient.edit_permissions(event.chat_id, user.id, view_messages=False)
-    await event.reply("`{}` was banned!".format(str(user.id)))
+    await event.reply(f"`{str(user.id)}` was banned!")
 
 
 __help__ = """
