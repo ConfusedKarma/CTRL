@@ -72,7 +72,7 @@ async def ban(event):
 
     # Well
     if not admin and not creator:
-        await event.reply(You aren't Admin!)
+        await event.reply("You aren't Admin!")
         return
     
     if not event.is_group:
