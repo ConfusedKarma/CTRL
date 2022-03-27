@@ -10,7 +10,7 @@ pyowm
 bs4
 zalgo_text
 wikipedia
-gpytranslate>=1.3.0
+gpytranslate==1.4.0
 tswift
 bleach
 markdown2
