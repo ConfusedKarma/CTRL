@@ -9,9 +9,10 @@
    ],
    "description": "Modular Telegram bot for managing your groups with a few extras!",
    "env": {
-      "ALLOW_EXCL": {
-         "description": "Set this to True if you want ! to be a command prefix along with /",
-         "value": "True"
+      "CUSTOM_CMD": {
+         "description": "Put your Custom Handler for commands,you can add more if you want! ['/', '!']",
+         "required": true,
+         "value": "'/', '!'"
       },
       "BAN_STICKER": {
          "description": "ID of the sticker you want to use when banning people.",
