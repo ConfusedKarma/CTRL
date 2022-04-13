@@ -65,6 +65,7 @@ def mute(bot: Bot, update: Update, args: List[str]) -> str:
 @loggable
 def unmute(bot: Bot, update: Update, args: List[str]) -> str:
     chat = update.effective_chat  # type: Optional[Chat]
+    user = update.effective_user  # type: Optional[User]
     message = update.effective_message  # type: Optional[Message]
 
     user_id = extract_user(message, args)
@@ -75,12 +76,11 @@ def unmute(bot: Bot, update: Update, args: List[str]) -> str:
     member = chat.get_member(int(user_id))
 
     if member:
-        user = update.effective_user  # type: Optional[User]
         if is_user_admin(chat, user_id, member=member):
             message.reply_text("This is an admin, what do you expect me to do?")
             return ""
 
-        elif member.status not in ['kicked', 'left', 'restricted']:
+        elif member.status != 'kicked' and member.status != 'left':
             if member.can_send_messages and member.can_send_media_messages \
                     and member.can_send_other_messages and member.can_add_web_page_previews:
                 message.reply_text("This user already has the right to speak in <b>{}</b>!".format(chat.title), parse_mode=ParseMode.HTML)
