@@ -1,321 +1,329 @@
-import html
-from typing import Optional, List
+from telethon.tl.functions.messages import EditChatDefaultBannedRightsRequest
+from telethon.tl.types import ChatBannedRights
 
-import telegram.ext as tg
-from telegram import Message, Chat, Update, Bot, ParseMode, User, MessageEntity
-from telegram import TelegramError
-from telegram.error import BadRequest
-from telegram.ext import CommandHandler, MessageHandler, Filters
-from telegram.ext.dispatcher import run_async
-from telegram.utils.helpers import mention_html
-
-import tg_bot.modules.sql.locks_sql as sql
-from tg_bot import dispatcher, SUDO_USERS, LOGGER
-from tg_bot.modules.disable import DisableAbleCommandHandler
-from tg_bot.modules.helper_funcs.chat_status import can_delete, is_user_admin, user_not_admin, user_admin, \
-    bot_can_delete, is_bot_admin
-from tg_bot.modules.helper_funcs.filters import CustomFilters
-from tg_bot.modules.log_channel import loggable
-from tg_bot.modules.sql import users_sql
-
-LOCK_TYPES = {'sticker': Filters.sticker,
-              'audio': Filters.audio,
-              'voice': Filters.voice,
-              'document': Filters.document,
-              'video': Filters.video,
-              'contact': Filters.contact,
-              'photo': Filters.photo,
-              'gif': Filters.document & CustomFilters.mime_type("video/mp4"),
-              'url': Filters.entity(MessageEntity.URL) | Filters.caption_entity(MessageEntity.URL),
-              'bots': Filters.status_update.new_chat_members,
-              'forward': Filters.forwarded,
-              'game': Filters.game,
-              'location': Filters.location,
-              }
-
-GIF = Filters.document & CustomFilters.mime_type("video/mp4")
-OTHER = Filters.game | Filters.sticker | GIF
-MEDIA = Filters.audio | Filters.document | Filters.video | Filters.voice | Filters.photo
-MESSAGES = Filters.text | Filters.contact | Filters.location | Filters.venue | Filters.command | MEDIA | OTHER
-PREVIEWS = Filters.entity("url")
-
-RESTRICTION_TYPES = {'messages': MESSAGES,
-                     'media': MEDIA,
-                     'other': OTHER,
-                     # 'previews': PREVIEWS, # NOTE: this has been removed cos its useless atm.
-                     'all': Filters.all}
-
-PERM_GROUP = 1
-REST_GROUP = 2
+from telethon import TelegramClient, events, functions, types
+from tg_bot.modules.helper_funcs.Tclient.chatstatus import user_is_admin
+from tg_bot.modules.sql.locks_sql import update_lock, is_locked, get_locks
+from tg_bot import Tclient
 
 
-class CustomCommandHandler(tg.CommandHandler):
-    def __init__(self, command, callback, **kwargs):
-        super().__init__(command, callback, **kwargs)
-
-    def check_update(self, update):
-        return super().check_update(update) and not (
-                sql.is_restr_locked(update.effective_chat.id, 'messages') and not is_user_admin(update.effective_chat,
-                                                                                                update.effective_user.id))
-
-
-tg.CommandHandler = CustomCommandHandler
-
-
-# NOT ASYNC
-def restr_members(bot, chat_id, members, messages=False, media=False, other=False, previews=False):
-    for mem in members:
-        try:
-            bot.restrict_chat_member(chat_id, mem.user,
-                                     can_send_messages=messages,
-                                     can_send_media_messages=media,
-                                     can_send_other_messages=other,
-                                     can_add_web_page_previews=previews)
-        except TelegramError:
-            pass
-
-
-# NOT ASYNC
-def unrestr_members(bot, chat_id, members, messages=True, media=True, other=True, previews=True):
-    for mem in members:
-        try:
-            bot.restrict_chat_member(chat_id, mem.user,
-                                     can_send_messages=messages,
-                                     can_send_media_messages=media,
-                                     can_send_other_messages=other,
-                                     can_add_web_page_previews=previews)
-        except TelegramError:
-            pass
-
-
-@run_async
-def locktypes(bot: Bot, update: Update):
-    update.effective_message.reply_text("\n - ".join(["Locks: "] + list(LOCK_TYPES) + list(RESTRICTION_TYPES)))
-
-@user_admin
-@bot_can_delete
-@loggable
-def lock(bot: Bot, update: Update, args: List[str]) -> str:
-    chat = update.effective_chat  # type: Optional[Chat]
-    user = update.effective_user  # type: Optional[User]
-    message = update.effective_message  # type: Optional[Message]
-    if can_delete(chat, bot.id):
-        if len(args) >= 1:
-            if args[0] in LOCK_TYPES:
-                sql.update_lock(chat.id, args[0], locked=True)
-                message.reply_text("Locked {} messages for all non-admins!".format(args[0]))
-
-                return "<b>{}:</b>" \
-                       "\n#LOCK" \
-                       "\n<b>Admin:</b> {}" \
-                       "\nLocked <code>{}</code>.".format(html.escape(chat.title),
-                                                          mention_html(user.id, user.first_name), args[0])
-
-            elif args[0] in RESTRICTION_TYPES:
-                sql.update_restriction(chat.id, args[0], locked=True)
-                if args[0] == "previews":
-                    members = users_sql.get_chat_members(str(chat.id))
-                    restr_members(bot, chat.id, members, messages=True, media=True, other=True)
-
-                message.reply_text("Locked {} for all non-admins!".format(args[0]))
-                return "<b>{}:</b>" \
-                       "\n#LOCK" \
-                       "\n<b>Admin:</b> {}" \
-                       "\nLocked <code>{}</code>.".format(html.escape(chat.title),
-                                                          mention_html(user.id, user.first_name), args[0])
-
-            else:
-                message.reply_text("What are you trying to lock...? Try /locktypes for the list of lockables")
-
+@Tclient.on(events.NewMessage(pattern="[/!]lock( (?P<target>\S+)|$)"))
+async def lock(event):
+    if event.sender_id == None:
+        return
+    
+    input_str = event.pattern_match.group("target")
+    peer_id = event.chat_id
+    chat = await event.get_chat()
+    
+    if not event.is_group:
+        return await event.reply("`I don't think this is a group.`")
+    
+    if not await user_is_admin(user_id=event.sender_id, message=event):
+        await event.reply(peer_id, f"You need to admin to Lock this in {event.chat.title}")
+        return
+    
+    msg = None
+    media = None
+    sticker = None
+    gif = None
+    gamee = None
+    ainline = None
+    gpoll = None
+    adduser = None
+    cpin = None
+    changeinfo = None
+    if input_str == "msg":
+        msg = True
+        what = "messages"
+    elif input_str == "media":
+        media = True
+        what = "media"
+    elif input_str == "sticker":
+        sticker = True
+        what = "stickers"
+    elif input_str == "gif":
+        gif = True
+        what = "GIFs"
+    elif input_str == "game":
+        gamee = True
+        what = "games"
+    elif input_str == "inline":
+        ainline = True
+        what = "inline bots"
+    elif input_str == "poll":
+        gpoll = True
+        what = "polls"
+    elif input_str == "invite":
+        adduser = True
+        what = "invites"
+    elif input_str == "pin":
+        cpin = True
+        what = "pins"
+    elif input_str == "info":
+        changeinfo = True
+        what = "chat info"
+    elif input_str == "all":
+        msg = True
+        media = True
+        sticker = True
+        gif = True
+        gamee = True
+        ainline = True
+        gpoll = True
+        adduser = True
+        cpin = True
+        changeinfo = True
+        what = "everything"
     else:
-        message.reply_text("I'm not an administrator, or haven't got delete rights.")
-
-    return ""
-
-
-@run_async
-@user_admin
-@loggable
-def unlock(bot: Bot, update: Update, args: List[str]) -> str:
-    chat = update.effective_chat  # type: Optional[Chat]
-    user = update.effective_user  # type: Optional[User]
-    message = update.effective_message  # type: Optional[Message]
-    if is_user_admin(chat, message.from_user.id):
-        if len(args) >= 1:
-            if args[0] in LOCK_TYPES:
-                sql.update_lock(chat.id, args[0], locked=False)
-                message.reply_text("Unlocked {} for everyone!".format(args[0]))
-                return "<b>{}:</b>" \
-                       "\n#UNLOCK" \
-                       "\n<b>Admin:</b> {}" \
-                       "\nUnlocked <code>{}</code>.".format(html.escape(chat.title),
-                                                            mention_html(user.id, user.first_name), args[0])
-
-            elif args[0] in RESTRICTION_TYPES:
-                sql.update_restriction(chat.id, args[0], locked=False)
-                """
-                members = users_sql.get_chat_members(chat.id)
-                if args[0] == "messages":
-                    unrestr_members(bot, chat.id, members, media=False, other=False, previews=False)
-
-                elif args[0] == "media":
-                    unrestr_members(bot, chat.id, members, other=False, previews=False)
-
-                elif args[0] == "other":
-                    unrestr_members(bot, chat.id, members, previews=False)
-
-                elif args[0] == "previews":
-                    unrestr_members(bot, chat.id, members)
-
-                elif args[0] == "all":
-                    unrestr_members(bot, chat.id, members, True, True, True, True)
-                """
-                message.reply_text("Unlocked {} for everyone!".format(args[0]))
-
-                return "<b>{}:</b>" \
-                       "\n#UNLOCK" \
-                       "\n<b>Admin:</b> {}" \
-                       "\nUnlocked <code>{}</code>.".format(html.escape(chat.title),
-                                                            mention_html(user.id, user.first_name), args[0])
-            else:
-                message.reply_text("What are you trying to unlock...? Try /locktypes for the list of lockables")
-
+        if not input_str:
+            return await event.reply("`I can't lock nothing !!`")
         else:
-            bot.sendMessage(chat.id, "What are you trying to unlock...?")
+            if input_str in (("url", "anonchannel", "forward", "commands")):
+                update_lock(peer_id, input_str, True)
+                return await event.reply(f"Locked `{input_str}` in **{event.chat.title}**.")
 
-    return ""
+    lock_rights = ChatBannedRights(
+        until_date=None,
+        send_messages=msg,
+        send_media=media,
+        send_stickers=sticker,
+        send_gifs=gif,
+        send_games=gamee,
+        send_inline=ainline,
+        send_polls=gpoll,
+        invite_users=adduser,
+        pin_messages=cpin,
+        change_info=changeinfo,
+    )
+    try:
+        await event.client(
+            EditChatDefaultBannedRightsRequest(peer=peer_id,
+                                               banned_rights=lock_rights))
+        await event.reply(f"Locked `{what}` in **{event.chat.title}**.")
+    except BaseException as e:
+        return await event.reply(
+            f"`Do I have proper rights for that ??`\n**Error:** {str(e)}")
+      
 
-
-@run_async
-@user_not_admin
-def del_lockables(bot: Bot, update: Update):
-    chat = update.effective_chat  # type: Optional[Chat]
-    message = update.effective_message  # type: Optional[Message]
-
-    for lockable, filter in LOCK_TYPES.items():
-        if filter(message) and sql.is_locked(chat.id, lockable) and can_delete(chat, bot.id):
-            if lockable == "bots":
-                new_members = update.effective_message.new_chat_members
-                for new_mem in new_members:
-                    if new_mem.is_bot:
-                        if not is_bot_admin(chat, bot.id):
-                            message.reply_text("I see a bot, and I've been told to stop them joining... "
-                                               "but I'm not admin!")
-                            return
-
-                        chat.kick_member(new_mem.id)
-                        message.reply_text("Only admins are allowed to add bots to this chat! Get outta here.")
-            else:
-                try:
-                    message.delete()
-                except BadRequest as excp:
-                    if excp.message != "Message to delete not found":
-                        LOGGER.exception("ERROR in lockables")
-
-            break
-
-
-@run_async
-@user_not_admin
-def rest_handler(bot: Bot, update: Update):
-    msg = update.effective_message  # type: Optional[Message]
-    chat = update.effective_chat  # type: Optional[Chat]
-    for restriction, filter in RESTRICTION_TYPES.items():
-        if filter(msg) and sql.is_restr_locked(chat.id, restriction) and can_delete(chat, bot.id):
-            try:
-                msg.delete()
-            except BadRequest as excp:
-                if excp.message != "Message to delete not found":
-                    LOGGER.exception("ERROR in restrictions")
-            break
-
-
-def build_lock_message(chat_id):
-    locks = sql.get_locks(chat_id)
-    restr = sql.get_restr(chat_id)
-    if (locks or restr):
-        res = "These are the locks in this chat:"
+@Tclient.on(events.NewMessage(pattern="[/!]unlock( (?P<target>\S+)|$)"))
+async def rem_locks(event):
+    if event.sender_id == None:
+        return
+    
+    if not event.is_group:
+        return await event.reply("`I don't think this is a group.`")
+    
+    input_str = event.pattern_match.group("target") 
+    peer_id = event.chat_id
+    chat = await event.get_chat()
+    
+    if not await user_is_admin(user_id=event.sender_id, message=event):
+        return await event.reply(peer_id, f"You need to be a admin to Unlock it in {event.chat.title}")
+    
+    msg = None
+    media = None
+    sticker = None
+    gif = None
+    gamee = None
+    ainline = None
+    gpoll = None
+    adduser = None
+    cpin = None
+    changeinfo = None
+    if input_str == "msg":
+        msg = False
+        what = "messages"
+    elif input_str == "media":
+        media = False
+        what = "media"
+    elif input_str == "sticker":
+        sticker = False
+        what = "stickers"
+    elif input_str == "gif":
+        gif = False
+        what = "GIFs"
+    elif input_str == "game":
+        gamee = False
+        what = "games"
+    elif input_str == "inline":
+        ainline = False
+        what = "inline bots"
+    elif input_str == "poll":
+        gpoll = False
+        what = "polls"
+    elif input_str == "invite":
+        adduser = False
+        what = "invites"
+    elif input_str == "pin":
+        cpin = False
+        what = "pins"
+    elif input_str == "info":
+        changeinfo = False
+        what = "chat info"
+    elif input_str == "all":
+        msg = False
+        media = False
+        sticker = False
+        gif = False
+        gamee = False
+        ainline = False
+        gpoll = False
+        adduser = False
+        cpin = False
+        changeinfo = False
+        what = "everything"
     else:
-        res = "There are no current locks in this chat."
-    if locks:
-        res += "\n - sticker = `{}`" \
-               "\n - audio = `{}`" \
-               "\n - voice = `{}`" \
-               "\n - document = `{}`" \
-               "\n - video = `{}`" \
-               "\n - contact = `{}`" \
-               "\n - photo = `{}`" \
-               "\n - gif = `{}`" \
-               "\n - url = `{}`" \
-               "\n - bots = `{}`" \
-               "\n - forward = `{}`" \
-               "\n - game = `{}`" \
-               "\n - location = `{}`".format(locks.sticker, locks.audio, locks.voice, locks.document,
-                                             locks.video, locks.contact, locks.photo, locks.gif, locks.url,
-                                             locks.bots, locks.forward, locks.game, locks.location)
-    if restr:
-        res += "\n - messages = `{}`" \
-               "\n - media = `{}`" \
-               "\n - other = `{}`" \
-               "\n - previews = `{}`" \
-               "\n - all = `{}`".format(restr.messages, restr.media, restr.other, restr.preview,
-                                        all([restr.messages, restr.media, restr.other, restr.preview]))
-    return res
+        if not input_str:
+            return await event.reply("`I can't unlock nothing !!`")
+        else:
+            if input_str in (("url", "anonchannel", "forward", "commands")):
+                update_lock(peer_id, input_str, False)
+                return await event.reply(f"Unlocked `{input_str}` in **{event.chat.title}**.")
 
-
-@run_async
-@user_admin
-def list_locks(bot: Bot, update: Update):
-    chat = update.effective_chat  # type: Optional[Chat]
-
-    res = build_lock_message(chat.id)
-
-    update.effective_message.reply_text(res, parse_mode=ParseMode.MARKDOWN)
-
-def __import_data__(chat_id, data):
-    # set chat locks
-    locks = data.get("locks", {})
-    for itemlock in locks:
-        if itemlock in LOCK_TYPES:
-            sql.update_lock(chat_id, itemlock, locked=True)
-        elif itemlock in RESTRICTION_TYPES:
-            sql.update_restriction(chat_id, itemlock, locked=True)
-
-
-def __migrate__(old_chat_id, new_chat_id):
-    sql.migrate_chat(old_chat_id, new_chat_id)
-
-
-def __chat_settings__(chat_id, user_id):
-    return build_lock_message(chat_id)
-
-
+    unlock_rights = ChatBannedRights(
+        until_date=None,
+        send_messages=msg,
+        send_media=media,
+        send_stickers=sticker,
+        send_gifs=gif,
+        send_games=gamee,
+        send_inline=ainline,
+        send_polls=gpoll,
+        invite_users=adduser,
+        pin_messages=cpin,
+        change_info=changeinfo,
+    )
+    try:
+        await event.client(
+            EditChatDefaultBannedRightsRequest(peer=peer_id,
+                                               banned_rights=unlock_rights))
+        await event.reply(f"Unlocked `{what}` in **{event.chat.title}**.")
+    except BaseException as e:
+        return await event.reply(
+            f"`Do I have proper rights for that ??`\n**Error:** {str(e)}")
+     
+        
+@Tclient.on(events.NewMessage(pattern="[/!]locks"))
+async def _(event):
+    if event.fwd_from:
+        return
+    if not event.is_group:
+        return await event.reply("`I don't think this is a group.`")
+    res = ""
+    current_db_locks = get_locks(event.chat_id)
+    if not current_db_locks:
+        res = "There are no DataBase locks in this chat"
+    else:
+        res = "Following are the DataBase locks in this chat: \n"
+        res += "• `url`: `{}`\n".format(current_db_locks.url)
+        res += "• `anonchannel`: `{}`\n".format(current_db_locks.anonchannel)
+        res += "• `forward`: `{}`\n".format(current_db_locks.forward)
+        res += "• `commands`: `{}`\n".format(current_db_locks.commands)
+    current_chat = await event.get_chat()
+    try:
+        current_api_locks = current_chat.default_banned_rights
+    except AttributeError as e:
+        LOGGER.info(str(e))
+    else:
+        res += "\nFollowing are the API locks in this chat: \n"
+        res += "• `msg`: `{}`\n".format(current_api_locks.send_messages)
+        res += "• `media`: `{}`\n".format(current_api_locks.send_media)
+        res += "• `sticker`: `{}`\n".format(current_api_locks.send_stickers)
+        res += "• `gif`: `{}`\n".format(current_api_locks.send_gifs)
+        res += "• `game`: `{}`\n".format(current_api_locks.send_games)
+        res += "• `inline bots`: `{}`\n".format(current_api_locks.send_inline)
+        res += "• `poll`: `{}`\n".format(current_api_locks.send_polls)
+        res += "• `invite`: `{}`\n".format(current_api_locks.invite_users)
+        res += "• `pin`: `{}`\n".format(current_api_locks.pin_messages)
+        res += "• `info`: `{}`\n".format(current_api_locks.change_info)
+    await event.reply(res)
+    
+    
+@Tclient.on(events.MessageEdited())  # pylint:disable=E0602
+@Tclient.on(events.NewMessage())  # pylint:disable=E0602
+async def check_incoming_messages(event):
+    # TODO: exempt admins from locks
+    peer_id = event.chat_id
+    result = await event.client(functions.channels.GetFullChannelRequest(event.sender.id))
+    # print(result.full_chat.linked_chat_id)
+    if is_locked(peer_id, "anonchannel"):
+        if event.chat.id == result.full_chat.linked_chat_id:
+            return # whitelist linked channel to talk in chat
+        if event.sender.left:
+            try:
+                await event.delete()
+            except Exception as e:
+                await event.reply(
+                    "I don't seem to have ADMIN permission here. \n`{}`".format(str(e))
+                )
+                update_lock(peer_id, "anonchannel", False)
+    if await user_is_admin(user_id=event.sender_id, message=event):
+        return
+    if is_locked(peer_id, "forward"):
+        if event.fwd_from:
+            try:
+                await event.delete()
+            except Exception as e:
+                await event.reply(
+                    "I don't seem to have ADMIN permission here. \n`{}`".format(str(e))
+                )
+                update_lock(peer_id, "forward", False)
+    if is_locked(peer_id, "url"):
+        entities = event.message.entities
+        is_url = False
+        if entities:
+            for entity in entities:
+                if isinstance(entity, (types.MessageEntityTextUrl, types.MessageEntityUrl)):
+                    is_url = True
+        if is_url:
+            try:
+                await event.delete()
+            except Exception as e:
+                await event.reply(
+                    "I don't seem to have ADMIN permission here. \n`{}`".format(str(e))
+                )
+                update_lock(peer_id, "url", False)
+    if is_locked(peer_id, "commands"):
+        entities = event.message.entities
+        is_command = False
+        if entities:
+            for entity in entities:
+                if isinstance(entity, types.MessageEntityBotCommand):
+                    is_command = True
+        if is_command:
+            try:
+                await event.delete()
+            except Exception as e:
+                await event.reply(
+                    "I don't seem to have ADMIN permission here. \n`{}`".format(str(e))
+                )
+                update_lock(peer_id, "commands", False)
+                
+                
 __help__ = """
- - /locktypes: a list of possible locktypes
+*Admins only:*
+• /lock <type> : to lock that.
+• /unlock <type> : to unlock that.
 
-*Admin only:*
- - /lock <type>: lock items of a certain type (not available in private)
- - /unlock <type>: unlock items of a certain type (not available in private)
- - /locks: the current list of locks in this chat.
-
-Locks can be used to restrict a group's users.
-eg:
-Locking urls will auto-delete all messages with urls which haven't been whitelisted, locking stickers will delete all \
-stickers, etc.
-Locking bots will stop non-admins from adding bots to the chat.
+example: 
+• /lock all: Lock everything.
+• /locks to check locked items.
+locks types below that can be lockable and unlockable.
+   `Invite`
+   `anonchannel`
+   `gif`
+   `pin`
+   `info`
+   `inline bots`
+   `sticker`
+   `game`
+   `poll`
+   `media`
+   `msg`
+   `forward`
+   `url`
+   `commands`
 """
 
 __mod_name__ = "Locks"
-
-LOCKTYPES_HANDLER = DisableAbleCommandHandler("locktypes", locktypes)
-LOCK_HANDLER = CommandHandler("lock", lock, pass_args=True, filters=Filters.group)
-UNLOCK_HANDLER = CommandHandler("unlock", unlock, pass_args=True, filters=Filters.group)
-LOCKED_HANDLER = CommandHandler("locks", list_locks, filters=Filters.group)
-
-dispatcher.add_handler(LOCK_HANDLER)
-dispatcher.add_handler(UNLOCK_HANDLER)
-dispatcher.add_handler(LOCKTYPES_HANDLER)
-dispatcher.add_handler(LOCKED_HANDLER)
-
-dispatcher.add_handler(MessageHandler(Filters.all & Filters.group, del_lockables), PERM_GROUP)
-dispatcher.add_handler(MessageHandler(Filters.all & Filters.group, rest_handler), REST_GROUP)
