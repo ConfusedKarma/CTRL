@@ -20,10 +20,10 @@ async def paste_bin(event):
         with open(doc, mode="r") as f:
             content = f.read()
         os.remove(doc)
-    res = requests.post("https://pastefy.ga/api/v2/paste",
-                        data={"content":content,"title":"","encrypted":"false","type":"PASTE"})
-    key = res.json()["paste"]["id"]
-    msg = f"**Pastefy** : https://pastefy.ga/{key}"
+    res = requests.post("https://paste.centos.org/",
+                        data={"code":content,"lang":"text","expire":259200,"submit":"submit"})
+    # this paste will get deleted in 5months change expire to increase or decrese time.
+    msg = f"**Paste** : {res.url}"
     await event.reply(msg, parse_mode="markdown")
     
     
@@ -35,19 +35,17 @@ async def trans(event):
     co = event.message.message[len("/trt "):]
     try:
         re = requests.get(f"https://translate.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl={co}&q={r.message}")
-        res = re.json()
-        lang = res["src"]
-        result = res["sentences"]
-        for x in result:
-            content = (x["trans"])
+        res = re.text
+        result = res.strip('[""]')
+        so = result[-2:]
         msg = f"""
-**Text**: `{r.message}`
-Translated from **{lang}** to **{co}**
-`{content}`
+**INPUT**: `{text}`
+Translated from **{so}** to **{co}**
+`{result[:-5]}`
 """
         await event.reply(msg, parse_mode="markdown")
-    except KeyError: # TODO: ARABIC AND HINDI
-        msg = f"Failed to translate"
+    except Exception as e:
+        msg = f"Failed to translate: {e}"
         await event.reply(msg, parse_mode="markdown")
 
 
@@ -61,7 +59,7 @@ async def bin(event):
     
 
 __help__ = """
- - /paste: Paste on pastefy.
+ - /paste: Paste on paste centos for 5months.
  - /trt: translate.
  - /bin: get 6 digit bank identify number.
 """
