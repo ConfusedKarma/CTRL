@@ -9,20 +9,20 @@ from tg_bot import Tclient
 
 @Tclient.on(events.NewMessage(pattern="[/!]lock( (?P<target>\S+)|$)"))
 async def lock(event):
-    if event.sender_id == None:
+    if event.sender_id is None:
         return
-    
+
     input_str = event.pattern_match.group("target")
     peer_id = event.chat_id
     chat = await event.get_chat()
-    
+
     if not event.is_group:
         return await event.reply("`I don't think this is a group.`")
-    
+
     if not await user_is_admin(user_id=event.sender_id, message=event):
         await event.reply(peer_id, f"You need to admin to Lock this in {event.chat.title}")
         return
-    
+
     msg = None
     media = None
     sticker = None
@@ -78,10 +78,9 @@ async def lock(event):
     else:
         if not input_str:
             return await event.reply("`I can't lock nothing !!`")
-        else:
-            if input_str in (("url", "anonchannel", "forward", "commands")):
-                update_lock(peer_id, input_str, True)
-                return await event.reply(f"Locked `{input_str}` in **{event.chat.title}**.")
+        if input_str in (("url", "anonchannel", "forward", "commands")):
+            update_lock(peer_id, input_str, True)
+            return await event.reply(f"Locked `{input_str}` in **{event.chat.title}**.")
 
     lock_rights = ChatBannedRights(
         until_date=None,
@@ -108,19 +107,19 @@ async def lock(event):
 
 @Tclient.on(events.NewMessage(pattern="[/!]unlock( (?P<target>\S+)|$)"))
 async def rem_locks(event):
-    if event.sender_id == None:
+    if event.sender_id is None:
         return
-    
+
     if not event.is_group:
         return await event.reply("`I don't think this is a group.`")
-    
-    input_str = event.pattern_match.group("target") 
+
+    input_str = event.pattern_match.group("target")
     peer_id = event.chat_id
     chat = await event.get_chat()
-    
+
     if not await user_is_admin(user_id=event.sender_id, message=event):
         return await event.reply(peer_id, f"You need to be a admin to Unlock it in {event.chat.title}")
-    
+
     msg = None
     media = None
     sticker = None
@@ -176,10 +175,9 @@ async def rem_locks(event):
     else:
         if not input_str:
             return await event.reply("`I can't unlock nothing !!`")
-        else:
-            if input_str in (("url", "anonchannel", "forward", "commands")):
-                update_lock(peer_id, input_str, False)
-                return await event.reply(f"Unlocked `{input_str}` in **{event.chat.title}**.")
+        if input_str in (("url", "anonchannel", "forward", "commands")):
+            update_lock(peer_id, input_str, False)
+            return await event.reply(f"Unlocked `{input_str}` in **{event.chat.title}**.")
 
     unlock_rights = ChatBannedRights(
         until_date=None,
@@ -211,15 +209,17 @@ async def _(event):
     if not event.is_group:
         return await event.reply("`I don't think this is a group.`")
     res = ""
-    current_db_locks = get_locks(event.chat_id)
-    if not current_db_locks:
-        res = "There are no DataBase locks in this chat"
-    else:
-        res = "Following are the DataBase locks in this chat: \n"
-        res += "• `url`: `{}`\n".format(current_db_locks.url)
+    if current_db_locks := get_locks(event.chat_id):
+        res = (
+            "Following are the DataBase locks in this chat: \n"
+            + "• `url`: `{}`\n".format(current_db_locks.url)
+        )
+
         res += "• `anonchannel`: `{}`\n".format(current_db_locks.anonchannel)
         res += "• `forward`: `{}`\n".format(current_db_locks.forward)
         res += "• `commands`: `{}`\n".format(current_db_locks.commands)
+    else:
+        res = "There are no DataBase locks in this chat"
     current_chat = await event.get_chat()
     try:
         current_api_locks = current_chat.default_banned_rights
@@ -245,33 +245,30 @@ async def _(event):
 async def check_incoming_messages(event):
     # TODO: exempt admins from locks
     peer_id = event.chat_id
-    if is_locked(peer_id, "anonchannel"):
-        if event.sender.left:
-            result = await event.client(functions.channels.GetFullChannelRequest(event.sender.id))
-            if event.chat.id == result.full_chat.linked_chat_id:
-                return 
-            try:
-                await event.delete()
-            except Exception as e:
-                await event.reply(
-                    "I don't seem to have ADMIN permission here. \n`{}`".format(str(e))
-                )
-                update_lock(peer_id, "anonchannel", False)
+    if is_locked(peer_id, "anonchannel") and event.sender.left:
+        result = await event.client(functions.channels.GetFullChannelRequest(event.sender.id))
+        if event.chat.id == result.full_chat.linked_chat_id:
+            return
+        try:
+            await event.delete()
+        except Exception as e:
+            await event.reply(
+                "I don't seem to have ADMIN permission here. \n`{}`".format(str(e))
+            )
+            update_lock(peer_id, "anonchannel", False)
     if await user_is_admin(user_id=event.sender_id, message=event):
         return
-    if is_locked(peer_id, "forward"):
-        if event.fwd_from:
-            try:
-                await event.delete()
-            except Exception as e:
-                await event.reply(
-                    "I don't seem to have ADMIN permission here. \n`{}`".format(str(e))
-                )
-                update_lock(peer_id, "forward", False)
+    if is_locked(peer_id, "forward") and event.fwd_from:
+        try:
+            await event.delete()
+        except Exception as e:
+            await event.reply(
+                "I don't seem to have ADMIN permission here. \n`{}`".format(str(e))
+            )
+            update_lock(peer_id, "forward", False)
     if is_locked(peer_id, "url"):
-        entities = event.message.entities
         is_url = False
-        if entities:
+        if entities := event.message.entities:
             for entity in entities:
                 if isinstance(entity, (types.MessageEntityTextUrl, types.MessageEntityUrl)):
                     is_url = True
@@ -284,9 +281,8 @@ async def check_incoming_messages(event):
                 )
                 update_lock(peer_id, "url", False)
     if is_locked(peer_id, "commands"):
-        entities = event.message.entities
         is_command = False
-        if entities:
+        if entities := event.message.entities:
             for entity in entities:
                 if isinstance(entity, types.MessageEntityBotCommand):
                     is_command = True
