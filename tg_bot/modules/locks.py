@@ -245,12 +245,11 @@ async def _(event):
 async def check_incoming_messages(event):
     # TODO: exempt admins from locks
     peer_id = event.chat_id
-    result = await event.client(functions.channels.GetFullChannelRequest(event.sender.id))
-    # print(result.full_chat.linked_chat_id)
     if is_locked(peer_id, "anonchannel"):
-        if event.chat.id == result.full_chat.linked_chat_id:
-            return # whitelist linked channel to talk in chat
         if event.sender.left:
+            result = await event.client(functions.channels.GetFullChannelRequest(event.sender.id))
+            if event.chat.id == result.full_chat.linked_chat_id:
+                return 
             try:
                 await event.delete()
             except Exception as e:
