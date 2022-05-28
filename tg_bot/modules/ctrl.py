@@ -39,7 +39,7 @@ async def trans(event):
         result = res.strip('[""]')
         so = result[-2:]
         msg = f"""
-**INPUT**: `{text}`
+**INPUT**: `{r.message}`
 Translated from **{so}** to **{co}**
 `{result[:-5]}`
 """
