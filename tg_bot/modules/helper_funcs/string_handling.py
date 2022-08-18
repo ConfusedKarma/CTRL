@@ -44,12 +44,12 @@ def _selective_escape(to_parse: str) -> str:
 # This is a fun one.
 def _calc_emoji_offset(to_calc) -> int:
     # Get all emoji in text.
-    emoticons = emoji.get_emoji_regexp().finditer(to_calc)
+    emoticons = emoji.replace_emoji(to_calc, replace='', version=5.0)
     # Check the utf16 length of the emoji to determine the offset it caused.
     # Normal, 1 character emoji don't affect; hence sub 1.
     # special, eg with two emoji characters (eg face, and skin col) will have length 2, so by subbing one we
     # know we'll get one extra offset,
-    return sum(len(e.group(0).encode('utf-16-le')) // 2 - 1 for e in emoticons)
+    return sum(len(e.encode('utf-16-le')) // 2 - 1 for e in emoticons)
 
 
 def markdown_parser(txt: str, entities: Dict[MessageEntity, str] = None, offset: int = 0) -> str:
