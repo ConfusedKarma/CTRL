@@ -13,7 +13,6 @@ You can also tap the Deploy To Heroku button below to deploy straight to Heroku!
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.png?v=103)](https://github.com/ellerbrock/open-source-badges/)  
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/843cdeb7f4124dd39eb3930939478259)](https://app.codacy.com/manual/ConfusedKarma/ctrl?utm_source=github.com&utm_medium=referral&utm_content=ConfusedKarma/ctrl&utm_campaign=Badge_Grade_Dashboard)
 
 [![CODE SIZE](https://img.shields.io/github/languages/code-size/ConfusedKarma/CTRL?style=for-the-badge)
 
@@ -25,7 +24,7 @@ You can also tap the Deploy To Heroku button below to deploy straight to Heroku!
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
 
-Alternatively, [find me on telegram](https://t.me/refundisillegal.)
+Alternatively, [find me on telegram](https://t.me/refundisillegal)
 
 ## Starting the bot.
 
@@ -35,7 +34,7 @@ Once you've setup your database and your configuration (see below) is complete, 
 
 
 ## Setting up the bot (Read this before trying to use!):
-Please make sure to use python3.6, as I cannot guarantee everything will work as expected on older python versions!
+Please make sure to use higher version then python3.6, as I cannot guarantee everything will work as expected on older python versions!
 This is because markdown parsing is done by iterating through a dict, which are ordered by default in 3.6.
 
 ### Configuration
