@@ -1,4 +1,4 @@
-FROM python:3.9.7-buster
+FROM python:3.11.1-buster
 
 WORKDIR /root/tg_bot
 
