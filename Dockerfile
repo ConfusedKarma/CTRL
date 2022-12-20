@@ -1,5 +1,7 @@
 FROM python:3.9.7-buster
 
+# Clone repository + work directory
+RUN git clone https://github.com/confusedkarma/ctrl.git /root/tg_bot
 WORKDIR /root/tg_bot
 
 COPY . .
